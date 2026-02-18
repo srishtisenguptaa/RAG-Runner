@@ -1,0 +1,24 @@
+# Document Parsing
+pypdf
+
+# LangChain Core and Community
+langchain
+langchain-community
+langchain-ollama
+langchain-experimental
+
+# Vector Store and Math
+faiss-cpu
+numpy
+
+# Optional but recommended for performance
+tiktoken
+
+#Fastapi
+fastapi
+uvicorn
+
+#STREAMLIT
+streamlit
+
+python-multipart
