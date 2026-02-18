@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 
-st.title("📖 Semantic Book Reader")
+st.title("Ask Your PDF")
 
 # Sidebar for Uploads
 with st.sidebar:
