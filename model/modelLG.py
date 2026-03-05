@@ -96,26 +96,30 @@ class ArchitectRAG:
         question = state["question"]
         documents = state.get("documents", [])
         
-        # 1. Get the search results
         search_results = self.web_search_tool.invoke({"query": question})
         
-        # 2. Safely parse the results
-        # If search_results is already a string, use it directly
+        # Handle all three possible return types from Tavily
         if isinstance(search_results, str):
             web_content = search_results
+        elif isinstance(search_results, list):
+            parts = []
+            for res in search_results:
+                if isinstance(res, str):
+                    parts.append(res)           # list of strings
+                elif isinstance(res, dict):
+                    parts.append(res.get("content", "") or res.get("text", ""))  # list of dicts
+            web_content = "\n".join(parts)
         else:
-            # If it's a list of dicts, join the content
-            web_content = "\n".join([res.get("content", "") for res in search_results])
+            web_content = str(search_results)   # fallback
         
-        # 3. Create a Document object (to keep state consistent)
         web_doc = Document(page_content=web_content, metadata={"source": "tavily_search"})
         documents.append(web_doc)
         
         return {
-            "documents": documents, 
-            "question": question, 
-            "logs": state.get("logs", []) + ["Internal PDF data insufficient. Fetched real-time data from Tavily Search."]
-    }
+            "documents": documents,
+            "question": question,
+            "logs": state.get("logs", []) + ["Fetched real-time data from Tavily Search."]
+        }
 
     # --- Node 4: Generate Answer ---
   # --- Node 4: Generate Answer ---
