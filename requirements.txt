@@ -4,19 +4,21 @@ pypdf
 # LangChain Core and Community
 langchain
 langchain-community
-langchain-ollama
+# langchain-ollama
 langchain-experimental
 langgraph
 tavily-python 
 dotenv
 langchain_tavily
+langchain_huggingface
+langchain_groq
 # Vector Store and Math
 faiss-cpu
 numpy
 
 # Optional but recommended for performance
 tiktoken
-
+sentence-transformers 
 #Fastapi
 fastapi
 uvicorn
@@ -25,3 +27,6 @@ uvicorn
 streamlit
 
 python-multipart
+
+#api call : uvicorn apiCall.api:app --reload
+#streamil: streamlit run FrontEnd\UI.py
