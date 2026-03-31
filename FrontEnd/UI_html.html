@@ -1,22 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Architect RAG</title>
   <style>
-    /* ─── Reset & Base ──────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
+    :root[data-theme="dark"] {
       --bg-main:        #0e1117;
       --bg-sidebar:     #262730;
-      --bg-input:       #1e2130;
       --bg-widget:      #31333f;
       --bg-hover:       #3d3f50;
       --border:         #3d3f50;
       --accent:         #ff4b4b;
       --accent-dim:     rgba(255,75,75,0.15);
+      --green:          #2dc97a;
+      --green-dim:      rgba(45,201,122,0.12);
+      --yellow:         #f5a623;
+      --yellow-dim:     rgba(245,166,35,0.12);
+      --blue:           #4b9eff;
+      --blue-dim:       rgba(75,158,255,0.1);
       --text-primary:   #fafafa;
       --text-secondary: #a3a8b8;
       --text-caption:   #888fa8;
@@ -25,498 +29,432 @@
       --radius:         8px;
       --sidebar-w:      280px;
       --font:           "Source Sans Pro", "Segoe UI", sans-serif;
+      --topbar-bg:      #0e1117;
+      --topbar-border:  #3d3f50;
+      --toggle-bg:      #31333f;
+      --toggle-border:  #555870;
+      --toggle-knob:    #fafafa;
+      --shadow:         0 4px 20px rgba(0,0,0,0.4);
     }
 
-    html, body {
-      height: 100%;
-      background: var(--bg-main);
-      color: var(--text-primary);
-      font-family: var(--font);
-      font-size: 15px;
-      line-height: 1.6;
+    :root[data-theme="light"] {
+      --bg-main:        #f4f5f9;
+      --bg-sidebar:     #ffffff;
+      --bg-widget:      #f0f1f6;
+      --bg-hover:       #e5e7f0;
+      --border:         #d4d6e2;
+      --accent:         #e03030;
+      --accent-dim:     rgba(224,48,48,0.1);
+      --green:          #18a05a;
+      --green-dim:      rgba(24,160,90,0.1);
+      --yellow:         #d48a0c;
+      --yellow-dim:     rgba(212,138,12,0.1);
+      --blue:           #2b7be0;
+      --blue-dim:       rgba(43,123,224,0.1);
+      --text-primary:   #1a1c2e;
+      --text-secondary: #555b78;
+      --text-caption:   #8087a0;
+      --user-bubble:    #ddeeff;
+      --asst-bubble:    #eef0f8;
+      --radius:         8px;
+      --sidebar-w:      280px;
+      --font:           "Source Sans Pro", "Segoe UI", sans-serif;
+      --topbar-bg:      #ffffff;
+      --topbar-border:  #d4d6e2;
+      --toggle-bg:      #e0e2ec;
+      --toggle-border:  #b0b4cc;
+      --toggle-knob:    #1a1c2e;
+      --shadow:         0 4px 20px rgba(0,0,0,0.08);
     }
 
-    /* ─── Layout ────────────────────────────────────────────────────────── */
-    #app {
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
+    html, body { height: 100%; background: var(--bg-main); color: var(--text-primary); font-family: var(--font); font-size: 15px; line-height: 1.6; transition: background .25s, color .25s; }
 
-    /* ─── Sidebar ───────────────────────────────────────────────────────── */
-    #sidebar {
-      width: var(--sidebar-w);
-      min-width: var(--sidebar-w);
-      background: var(--bg-sidebar);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      padding: 24px 16px 20px;
-      gap: 0;
-      overflow-y: auto;
-    }
+    #app { display: flex; height: 100vh; overflow: hidden; flex-direction: column; }
 
-    .sidebar-header {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      margin-bottom: 18px;
-    }
-
-    /* Radio Group */
-    .radio-label {
-      font-size: 13.5px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 8px;
-      display: block;
-    }
-
-    .radio-help {
-      font-size: 11.5px;
-      color: var(--text-caption);
-      margin-bottom: 12px;
-      line-height: 1.5;
-    }
-
-    .radio-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 4px;
-    }
-
-    .radio-option {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 10px;
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: background .15s;
-    }
-    .radio-option:hover { background: var(--bg-hover); }
-    .radio-option.selected { background: var(--accent-dim); }
-
-    .radio-option input[type="radio"] {
-      appearance: none;
-      width: 16px; height: 16px;
-      border: 2px solid var(--text-secondary);
-      border-radius: 50%;
+    /* ── Top Bar ── */
+    #topbar {
+      height: 52px; min-height: 52px;
+      background: var(--topbar-bg);
+      border-bottom: 1px solid var(--topbar-border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
       flex-shrink: 0;
-      transition: border-color .15s;
-      position: relative;
-      cursor: pointer;
+      transition: background .25s, border-color .25s;
+      box-shadow: var(--shadow);
+      z-index: 10;
     }
-    .radio-option.selected input[type="radio"] {
-      border-color: var(--accent);
+    #topbar h1 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; color: var(--text-primary); }
+
+    /* ── Theme Toggle ── */
+    .theme-toggle-wrap {
+      display: flex; align-items: center; gap: 8px;
     }
-    .radio-option.selected input[type="radio"]::after {
+    .theme-label {
+      font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .theme-toggle {
+      position: relative; width: 46px; height: 24px; cursor: pointer;
+    }
+    .theme-toggle input { opacity: 0; width: 0; height: 0; }
+    .theme-track {
+      position: absolute; inset: 0;
+      background: var(--toggle-bg);
+      border: 1.5px solid var(--toggle-border);
+      border-radius: 34px;
+      transition: background .25s, border-color .25s;
+      display: flex; align-items: center;
+    }
+    .theme-track::before {
       content: "";
       position: absolute;
-      inset: 2px;
+      left: 3px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px;
+      background: var(--toggle-knob);
       border-radius: 50%;
-      background: var(--accent);
+      transition: transform .25s, background .25s;
     }
+    input:checked + .theme-track::before { transform: translate(22px, -50%); }
+    .theme-icons {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; pointer-events: none;
+    }
+    .theme-icon { font-size: 11px; }
 
-    .radio-option span {
-      font-size: 14px;
-      color: var(--text-primary);
-    }
+    /* ── Body Row (sidebar + main) ── */
+    #body-row { display: flex; flex: 1; overflow: hidden; }
 
-    /* Divider */
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 18px 0;
-    }
-
-    /* File Uploader */
-    .upload-label {
-      font-size: 13.5px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 8px;
-      display: block;
-    }
-
-    #drop-zone {
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
-      padding: 20px 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color .2s, background .2s;
-      margin-bottom: 10px;
-      background: var(--bg-widget);
-    }
-    #drop-zone:hover, #drop-zone.dragover {
-      border-color: var(--accent);
-      background: var(--accent-dim);
-    }
-    #drop-zone svg { margin-bottom: 6px; opacity: .6; }
-    #drop-zone p {
-      font-size: 12px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-    }
-    #drop-zone strong { color: var(--text-primary); font-weight: 600; }
-    #file-input { display: none; }
-
-    #file-name {
-      font-size: 12px;
-      color: var(--accent);
-      margin-bottom: 10px;
-      word-break: break-all;
-      display: none;
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      width: 100%;
-      padding: 8px 14px;
-      border-radius: var(--radius);
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: var(--font);
-      transition: opacity .15s, transform .1s;
-    }
-    .btn:active { transform: scale(.98); }
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-    }
-    .btn-primary:hover { opacity: .88; }
-    .btn-primary:disabled {
-      opacity: .35;
-      cursor: not-allowed;
-    }
-
-    /* Toast / Status */
-    #index-status {
-      margin-top: 10px;
-      font-size: 12px;
-      border-radius: 6px;
-      padding: 8px 10px;
-      display: none;
-    }
-    #index-status.success {
-      background: rgba(0,200,100,.12);
-      color: #2dc97a;
-      border: 1px solid rgba(0,200,100,.25);
-    }
-    #index-status.error {
-      background: rgba(255,75,75,.12);
-      color: var(--accent);
-      border: 1px solid rgba(255,75,75,.25);
-    }
-
-    /* ─── Main Content ──────────────────────────────────────────────────── */
-    #main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* Page Title */
-    #page-title {
-      padding: 24px 36px 12px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    #page-title h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--text-primary);
-      letter-spacing: -.01em;
-    }
-
-    /* Chat Window */
-    #chat-window {
-      flex: 1;
+    /* ── Sidebar ── */
+    #sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      background: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 24px 16px 20px;
       overflow-y: auto;
-      padding: 24px 36px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      scroll-behavior: smooth;
+      transition: background .25s, border-color .25s;
     }
+    .sidebar-header { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 18px; }
 
-    /* Scrollbar */
-    #chat-window::-webkit-scrollbar { width: 5px; }
-    #chat-window::-webkit-scrollbar-track { background: transparent; }
-    #chat-window::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
-    /* Messages */
-    .message {
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-      animation: fadeSlide .25s ease;
+    /* ── Radio row with tooltip ── */
+    .radio-label-row {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
     }
-    @keyframes fadeSlide {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    .radio-label { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
 
-    .msg-avatar {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      line-height: 1;
+    /* ── Tooltip ── */
+    .tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
+    .tooltip-icon {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--bg-hover); border: 1.5px solid var(--border);
+      color: var(--text-secondary); font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      cursor: default; user-select: none; flex-shrink: 0;
+      transition: background .15s, border-color .15s, color .15s;
     }
-    .msg-avatar.user { background: #1c3a5c; }
-    .msg-avatar.assistant { background: #2a2d3e; }
-
-    .msg-body { flex: 1; min-width: 0; }
-
-    .msg-name {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      color: var(--text-secondary);
-      margin-bottom: 4px;
+    .tooltip-wrap:hover .tooltip-icon {
+      background: var(--blue-dim); border-color: var(--blue); color: var(--blue);
     }
-
-    .msg-text {
-      background: var(--asst-bubble);
-      border-radius: 0 var(--radius) var(--radius) var(--radius);
-      padding: 12px 14px;
-      font-size: 14.5px;
-      line-height: 1.7;
-      color: var(--text-primary);
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    .message.user .msg-text {
-      background: var(--user-bubble);
-      border-radius: var(--radius) 0 var(--radius) var(--radius);
-    }
-
-    .msg-caption {
-      font-size: 11px;
-      color: var(--text-caption);
-      margin-top: 5px;
-    }
-
-    /* Empty state */
-    #empty-state {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      color: var(--text-secondary);
-      opacity: .5;
-      pointer-events: none;
-      user-select: none;
-    }
-    #empty-state svg { opacity: .4; }
-    #empty-state p { font-size: 14px; text-align: center; }
-
-    /* Spinner */
-    .spinner {
-      width: 18px; height: 18px;
-      border: 2px solid rgba(255,255,255,.15);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      display: inline-block;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .thinking-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--text-caption);
-    }
-
-    /* ─── Chat Input Bar ────────────────────────────────────────────────── */
-    #input-bar {
-      border-top: 1px solid var(--border);
-      padding: 16px 36px;
-      flex-shrink: 0;
-      background: var(--bg-main);
-    }
-
-    #input-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .tooltip-box {
+      visibility: hidden; opacity: 0;
+      position: absolute; left: 24px; top: 50%; transform: translateY(-50%);
       background: var(--bg-widget);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      transition: border-color .2s;
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      width: 210px;
+      font-size: 12px; line-height: 1.6; color: var(--text-secondary);
+      box-shadow: var(--shadow);
+      pointer-events: none;
+      transition: opacity .18s;
+      z-index: 99;
     }
-    #input-wrapper:focus-within { border-color: var(--accent); }
+    .tooltip-box::before {
+      content: "";
+      position: absolute; left: -6px; top: 50%; transform: translateY(-50%);
+      border-width: 5px 6px 5px 0;
+      border-style: solid;
+      border-color: transparent var(--border) transparent transparent;
+    }
+    .tooltip-box::after {
+      content: "";
+      position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
+      border-width: 4px 5px 4px 0;
+      border-style: solid;
+      border-color: transparent var(--bg-widget) transparent transparent;
+    }
+    .tooltip-wrap:hover .tooltip-box { visibility: visible; opacity: 1; }
+    .tooltip-box strong { color: var(--text-primary); }
 
-    #chat-input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      font-size: 14.5px;
-      color: var(--text-primary);
+    .radio-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+    .radio-option { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer; transition: background .15s; }
+    .radio-option:hover { background: var(--bg-hover); }
+    .radio-option.selected { background: var(--accent-dim); }
+    .radio-option input[type="radio"] { appearance: none; width: 16px; height: 16px; border: 2px solid var(--text-secondary); border-radius: 50%; flex-shrink: 0; transition: border-color .15s; position: relative; cursor: pointer; }
+    .radio-option.selected input[type="radio"] { border-color: var(--accent); }
+    .radio-option.selected input[type="radio"]::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: var(--accent); }
+    .radio-option span { font-size: 14px; color: var(--text-primary); }
+    .divider { height: 1px; background: var(--border); margin: 18px 0; }
+    .upload-label-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .upload-label { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+    .optional-badge {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--yellow); background: var(--yellow-dim);
+      border: 1px solid rgba(245,166,35,.3); border-radius: 4px;
+      padding: 2px 6px; display: none;
+    }
+    .optional-badge.visible { display: inline-block; }
+    .upload-section { transition: opacity .25s; }
+    .upload-section.faded { opacity: .5; }
+
+    #drop-zone { border: 1px dashed var(--border); border-radius: var(--radius); padding: 20px 12px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; margin-bottom: 10px; background: var(--bg-widget); }
+    #drop-zone:hover, #drop-zone.dragover { border-color: var(--accent); background: var(--accent-dim); }
+    #drop-zone svg { margin-bottom: 6px; opacity: .6; }
+    #drop-zone p { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    #drop-zone strong { color: var(--text-primary); font-weight: 600; }
+    #file-input { display: none; }
+    #file-name { font-size: 12px; color: var(--accent); margin-bottom: 10px; word-break: break-all; display: none; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 8px 14px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 14px; font-weight: 600; font-family: var(--font); transition: opacity .15s, transform .1s; }
+    .btn:active { transform: scale(.98); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-primary:disabled { opacity: .35; cursor: not-allowed; }
+
+    #index-status { margin-top: 10px; font-size: 12px; border-radius: 6px; padding: 8px 10px; display: none; }
+    #index-status.success { background: var(--green-dim); color: var(--green); border: 1px solid rgba(45,201,122,.25); }
+    #index-status.error { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(255,75,75,.25); }
+
+    /* ── Main ── */
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    #chat-window { flex: 1; overflow-y: auto; padding: 24px 36px; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
+    #chat-window::-webkit-scrollbar { width: 5px; }
+    #chat-window::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Messages ── */
+    .message { display: flex; gap: 14px; align-items: flex-start; animation: fadeSlide .25s ease; }
+    @keyframes fadeSlide { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    .msg-avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .msg-avatar.user { background: #1c3a5c; }
+    .msg-avatar.assistant { background: var(--bg-widget); }
+
+    .msg-body { flex: 1; min-width: 0; }
+    .msg-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); margin-bottom: 4px; }
+    .msg-text { background: var(--asst-bubble); border-radius: 0 var(--radius) var(--radius) var(--radius); padding: 12px 14px; font-size: 14.5px; line-height: 1.7; color: var(--text-primary); white-space: pre-wrap; word-wrap: break-word; transition: background .25s; }
+    .message.user .msg-text { background: var(--user-bubble); border-radius: var(--radius) 0 var(--radius) var(--radius); }
+    .msg-caption { font-size: 11px; color: var(--text-caption); margin-top: 5px; }
+
+    /* ── Source Transparency Block ── */
+    .sources-block { margin-top: 10px; }
+    .sources-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600; color: var(--blue);
+      cursor: pointer; padding: 4px 8px; border-radius: 6px;
+      background: var(--blue-dim); border: 1px solid rgba(75,158,255,.2);
+      transition: opacity .15s; user-select: none;
+    }
+    .sources-toggle:hover { opacity: .8; }
+    .sources-toggle .chevron { transition: transform .2s; display: inline-block; }
+    .sources-toggle.open .chevron { transform: rotate(90deg); }
+    .sources-cards { margin-top: 8px; display: none; flex-direction: column; gap: 6px; }
+    .sources-cards.visible { display: flex; }
+    .source-card { background: var(--bg-widget); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; border-left: 3px solid var(--blue); transition: background .25s; }
+    .source-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .source-page { font-size: 11px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .05em; }
+    .source-score { font-size: 10.5px; color: var(--text-caption); background: var(--bg-hover); padding: 2px 6px; border-radius: 4px; }
+    .source-snippet { font-size: 12px; color: var(--text-secondary); line-height: 1.6; font-style: italic; }
+
+    /* ── Follow-up Chips ── */
+    .followup-block { margin-top: 12px; }
+    .followup-label { font-size: 11px; color: var(--text-caption); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+    .followup-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      font-size: 12.5px; color: var(--text-secondary);
+      background: var(--bg-widget); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      cursor: pointer; transition: border-color .15s, color .15s, background .15s;
       font-family: var(--font);
-      resize: none;
-      max-height: 120px;
-      line-height: 1.5;
     }
-    #chat-input::placeholder { color: var(--text-caption); }
+    .chip:hover { border-color: var(--accent); color: var(--text-primary); background: var(--accent-dim); }
 
-    #send-btn {
-      background: var(--accent);
-      border: none;
-      border-radius: 6px;
-      width: 34px; height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: opacity .15s;
-    }
+    /* ── Empty state ── */
+    #empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--text-secondary); opacity: .5; pointer-events: none; }
+    #empty-state p { font-size: 14px; text-align: center; }
+
+    /* ── Spinner ── */
+    .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.15); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .thinking-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-caption); }
+
+    /* ── Input Bar ── */
+    #input-bar { border-top: 1px solid var(--border); padding: 16px 36px; flex-shrink: 0; background: var(--bg-main); transition: background .25s, border-color .25s; }
+    #input-wrapper { display: flex; align-items: center; gap: 10px; background: var(--bg-widget); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; transition: border-color .2s, background .25s; }
+    #input-wrapper:focus-within { border-color: var(--accent); }
+    #chat-input { flex: 1; background: transparent; border: none; outline: none; font-size: 14.5px; color: var(--text-primary); font-family: var(--font); resize: none; max-height: 120px; line-height: 1.5; }
+    #chat-input::placeholder { color: var(--text-caption); }
+    #send-btn { background: var(--accent); border: none; border-radius: 6px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: opacity .15s; }
     #send-btn:hover { opacity: .85; }
     #send-btn:disabled { opacity: .3; cursor: not-allowed; }
-    #send-btn svg { pointer-events: none; }
   </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ── Sidebar ─────────────────────────────────── -->
-  <aside id="sidebar">
-    <div class="sidebar-header">⚙️ Configuration</div>
-
-    <label class="radio-label">Select RAG Engine:</label>
-    <div class="radio-group" id="rag-mode-group">
-      <label class="radio-option selected" data-value="standard">
-        <input type="radio" name="rag_mode" value="standard" checked />
-        <span>Standard</span>
+  <!-- ── Top Bar ── -->
+  <header id="topbar">
+    <h1>📚 Intelligent Research Assistant</h1>
+    <div class="theme-toggle-wrap">
+      <span class="theme-label" id="theme-label">Dark</span>
+      <label class="theme-toggle" title="Toggle light / dark mode">
+        <input type="checkbox" id="theme-checkbox" />
+        <div class="theme-track">
+          <div class="theme-icons">
+            <span class="theme-icon">🌙</span>
+            <span class="theme-icon">☀️</span>
+          </div>
+        </div>
       </label>
-      <label class="radio-option" data-value="architect">
-        <input type="radio" name="rag_mode" value="architect" />
-        <span>Architect</span>
-      </label>
     </div>
-    <div class="radio-help">
-      <strong>Standard:</strong> Fast, PDF-only retrieval.<br>
-      <strong>Architect:</strong> Advanced, self-correcting agent with Web Search fallback.
-    </div>
+  </header>
 
-    <div class="divider"></div>
+  <div id="body-row">
 
-    <label class="upload-label">Upload a PDF Document</label>
-    <div id="drop-zone">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a3a8b8" stroke-width="1.5">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-        <line x1="12" y1="18" x2="12" y2="12"/>
-        <line x1="9" y1="15" x2="15" y2="15"/>
-      </svg>
-      <p><strong>Drag & drop</strong> or <strong style="color:var(--accent);cursor:pointer" onclick="document.getElementById('file-input').click()">browse</strong><br>PDF files only</p>
-    </div>
-    <input type="file" id="file-input" accept=".pdf" />
-    <div id="file-name"></div>
+    <!-- ── Sidebar ── -->
+    <aside id="sidebar">
+      <div class="sidebar-header">⚙️ Configuration</div>
 
-    <button class="btn btn-primary" id="index-btn" disabled>
-      Index Document
-    </button>
-    <div id="index-status"></div>
-  </aside>
+      <!-- Radio label + tooltip -->
+      <div class="radio-label-row">
+        <span class="radio-label">Select RAG Engine:</span>
+        <div class="tooltip-wrap">
+          <div class="tooltip-icon">?</div>
+          <div class="tooltip-box">
+            <strong>Standard:</strong> Fast, PDF-only retrieval.<br><br>
+            <strong>Architect:</strong> Advanced, self-correcting agent with Web Search fallback.
+          </div>
+        </div>
+      </div>
 
-  <!-- ── Main ───────────────────────────────────── -->
-  <div id="main">
-    <div id="page-title">
-      <h1>📚 Intelligent Research Assistant</h1>
-    </div>
+      <div class="radio-group" id="rag-mode-group">
+        <label class="radio-option selected" data-value="standard">
+          <input type="radio" name="rag_mode" value="standard" checked />
+          <span>Standard</span>
+        </label>
+        <label class="radio-option" data-value="architect">
+          <input type="radio" name="rag_mode" value="architect" />
+          <span>Architect</span>
+        </label>
+      </div>
 
-    <div id="chat-window">
-      <div id="empty-state">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      <div class="divider"></div>
+
+      <div class="upload-section" id="upload-section">
+      <div class="upload-label-row">
+        <span class="upload-label">Upload a PDF Document</span>
+        <span class="optional-badge" id="optional-badge">Optional</span>
+      </div>
+      <div id="drop-zone">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a3a8b8" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
         </svg>
-        <p>Upload a PDF and ask a question to get started.</p>
+        <p><strong>Drag & drop</strong> or <strong style="color:var(--accent);cursor:pointer" onclick="document.getElementById('file-input').click()">browse</strong><br>PDF files only</p>
+      </div>
+      <input type="file" id="file-input" accept=".pdf" />
+      <div id="file-name"></div>
+      <button class="btn btn-primary" id="index-btn" disabled>Index Document</button>
+      <div id="index-status"></div>
+      </div><!-- /upload-section -->
+    </aside>
+
+    <!-- ── Main ── -->
+    <div id="main">
+      <div id="chat-window">
+        <div id="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <p id="empty-text">Upload a PDF and ask a question to get started.</p>
+        </div>
+      </div>
+
+      <div id="input-bar">
+        <div id="input-wrapper">
+          <textarea id="chat-input" rows="1" placeholder="Ask a question..."></textarea>
+          <button id="send-btn" title="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
-    <div id="input-bar">
-      <div id="input-wrapper">
-        <textarea id="chat-input" rows="1" placeholder="Ask a question..."></textarea>
-        <button id="send-btn" title="Send">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+  </div><!-- /body-row -->
+</div><!-- /app -->
 
 <script>
-  /* ── State ──────────────────────────────────────────────────────────── */
   const API = "http://localhost:8000";
-  let messages = [];
   let selectedFile = null;
   let ragMode = "standard";
   let isLoading = false;
 
-  /* ── Elements ───────────────────────────────────────────────────────── */
-  const chatWindow  = document.getElementById("chat-window");
-  const emptyState  = document.getElementById("empty-state");
-  const chatInput   = document.getElementById("chat-input");
-  const sendBtn     = document.getElementById("send-btn");
-  const fileInput   = document.getElementById("file-input");
-  const dropZone    = document.getElementById("drop-zone");
-  const fileNameEl  = document.getElementById("file-name");
-  const indexBtn    = document.getElementById("index-btn");
-  const indexStatus = document.getElementById("index-status");
-  const radioGroup  = document.getElementById("rag-mode-group");
+  const chatWindow   = document.getElementById("chat-window");
+  const emptyState   = document.getElementById("empty-state");
+  const chatInput    = document.getElementById("chat-input");
+  const sendBtn      = document.getElementById("send-btn");
+  const fileInput    = document.getElementById("file-input");
+  const dropZone     = document.getElementById("drop-zone");
+  const fileNameEl   = document.getElementById("file-name");
+  const indexBtn     = document.getElementById("index-btn");
+  const indexStatus  = document.getElementById("index-status");
+  const radioGroup   = document.getElementById("rag-mode-group");
+  const themeCheck   = document.getElementById("theme-checkbox");
+  const themeLabel   = document.getElementById("theme-label");
 
-  /* ── RAG Mode Toggle ────────────────────────────────────────────────── */
+  /* ── Theme Toggle ── */
+  themeCheck.addEventListener("change", () => {
+    const isLight = themeCheck.checked;
+    document.documentElement.setAttribute("data-theme", isLight ? "light" : "dark");
+    themeLabel.textContent = isLight ? "Light" : "Dark";
+  });
+
+  const optionalBadge  = document.getElementById("optional-badge");
+  const uploadSection  = document.getElementById("upload-section");
+  const emptyText      = document.getElementById("empty-text");
+
+  function applyModeUI() {
+    const isArchitect = ragMode === "architect";
+    optionalBadge.classList.toggle("visible", isArchitect);
+    uploadSection.classList.toggle("faded", isArchitect);
+    emptyText.textContent = isArchitect
+      ? "Ask anything — Architect uses Web Search. Upload a PDF for document-specific answers."
+      : "Upload a PDF and ask a question to get started.";
+  }
+
+  /* ── RAG Mode Toggle ── */
   radioGroup.querySelectorAll(".radio-option").forEach(opt => {
     opt.addEventListener("click", () => {
       ragMode = opt.dataset.value;
       radioGroup.querySelectorAll(".radio-option").forEach(o => o.classList.remove("selected"));
       opt.classList.add("selected");
       opt.querySelector("input").checked = true;
+      applyModeUI();
     });
   });
 
-  /* ── File Upload ────────────────────────────────────────────────────── */
+  /* ── File Upload ── */
   dropZone.addEventListener("click", () => fileInput.click());
-
   dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("dragover"); });
   dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
   dropZone.addEventListener("drop", e => {
-    e.preventDefault();
-    dropZone.classList.remove("dragover");
+    e.preventDefault(); dropZone.classList.remove("dragover");
     const f = e.dataTransfer.files[0];
     if (f && f.type === "application/pdf") setFile(f);
   });
-
-  fileInput.addEventListener("change", () => {
-    if (fileInput.files[0]) setFile(fileInput.files[0]);
-  });
+  fileInput.addEventListener("change", () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
 
   function setFile(f) {
     selectedFile = f;
@@ -526,18 +464,16 @@
     indexStatus.style.display = "none";
   }
 
-  /* ── Index Document ─────────────────────────────────────────────────── */
+  /* ── Index Document ── */
   indexBtn.addEventListener("click", async () => {
     if (!selectedFile) return;
     indexBtn.disabled = true;
     indexBtn.innerHTML = '<span class="spinner"></span> Processing…';
     indexStatus.style.display = "none";
-
     try {
       const form = new FormData();
       form.append("file", selectedFile, selectedFile.name);
       const res = await fetch(`${API}/upload`, { method: "POST", body: form });
-
       if (res.ok) {
         const data = await res.json();
         showStatus(`✅ Indexed into ${data.chunks_created ?? "?"} semantic chunks!`, "success");
@@ -558,51 +494,41 @@
     indexStatus.style.display = "block";
   }
 
-  /* ── Chat Input Auto-resize ─────────────────────────────────────────── */
+  /* ── Chat Input ── */
   chatInput.addEventListener("input", () => {
     chatInput.style.height = "auto";
     chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + "px";
   });
-
   chatInput.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (!isLoading) sendMessage();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!isLoading) sendMessage(); }
   });
-
   sendBtn.addEventListener("click", () => { if (!isLoading) sendMessage(); });
 
-  /* ── Send Message ───────────────────────────────────────────────────── */
+  /* ── Send Message ── */
   async function sendMessage() {
     const text = chatInput.value.trim();
     if (!text) return;
-
     isLoading = true;
     sendBtn.disabled = true;
     chatInput.value = "";
     chatInput.style.height = "auto";
-
-    // Add user message
     appendMessage("user", text);
-
-    // Add thinking indicator
     const thinkingId = appendThinking();
-
     try {
       const res = await fetch(`${API}/chat?mode=${ragMode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: text })
       });
-
       removeThinking(thinkingId);
-
       if (res.ok) {
         const data = await res.json();
-        const answer = data.answer ?? "(No answer)";
-        const caption = `🔍 Source: ${data.sources ?? "N/A"} | 🧠 Engine: ${data.mode ?? ragMode}`;
-        appendMessage("assistant", answer, caption);
+        appendAssistantMessage(
+          data.answer ?? "(No answer)",
+          `🔍 Source: ${data.sources ?? "N/A"} | 🧠 Engine: ${data.mode ?? ragMode}`,
+          data.sources_detail ?? [],
+          data.followups ?? []
+        );
       } else {
         appendMessage("assistant", "⚠️ Backend error. Make sure the PDF is uploaded and FastAPI is running.");
       }
@@ -615,48 +541,72 @@
     }
   }
 
-  /* ── Render Helpers ─────────────────────────────────────────────────── */
-  function appendMessage(role, text, caption = null) {
+  function appendMessage(role, text) {
     hideEmpty();
     const isUser = role === "user";
-
     const wrap = document.createElement("div");
     wrap.className = `message ${role}`;
-
     const avatar = document.createElement("div");
     avatar.className = `msg-avatar ${role}`;
     avatar.textContent = isUser ? "👤" : "🤖";
+    const body = document.createElement("div"); body.className = "msg-body";
+    const name = document.createElement("div"); name.className = "msg-name"; name.textContent = isUser ? "user" : "assistant";
+    const bubble = document.createElement("div"); bubble.className = "msg-text"; bubble.textContent = text;
+    body.appendChild(name); body.appendChild(bubble);
+    if (isUser) { wrap.appendChild(body); wrap.appendChild(avatar); wrap.style.flexDirection = "row-reverse"; }
+    else { wrap.appendChild(avatar); wrap.appendChild(body); }
+    chatWindow.appendChild(wrap);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
 
-    const body = document.createElement("div");
-    body.className = "msg-body";
+  function appendAssistantMessage(text, caption, sourcesDetail, followups) {
+    hideEmpty();
+    const wrap = document.createElement("div"); wrap.className = "message assistant";
+    const avatar = document.createElement("div"); avatar.className = "msg-avatar assistant"; avatar.textContent = "🤖";
+    const body = document.createElement("div"); body.className = "msg-body";
+    const name = document.createElement("div"); name.className = "msg-name"; name.textContent = "assistant";
+    const bubble = document.createElement("div"); bubble.className = "msg-text"; bubble.textContent = text;
+    const cap = document.createElement("div"); cap.className = "msg-caption"; cap.textContent = caption;
+    body.appendChild(name); body.appendChild(bubble); body.appendChild(cap);
 
-    const name = document.createElement("div");
-    name.className = "msg-name";
-    name.textContent = isUser ? "user" : "assistant";
-
-    const bubble = document.createElement("div");
-    bubble.className = "msg-text";
-    bubble.textContent = text;
-
-    body.appendChild(name);
-    body.appendChild(bubble);
-
-    if (caption) {
-      const cap = document.createElement("div");
-      cap.className = "msg-caption";
-      cap.textContent = caption;
-      body.appendChild(cap);
+    if (sourcesDetail && sourcesDetail.length > 0) {
+      const srcBlock = document.createElement("div"); srcBlock.className = "sources-block";
+      const toggle = document.createElement("div"); toggle.className = "sources-toggle";
+      toggle.innerHTML = `<span class="chevron">▶</span> View ${sourcesDetail.length} Source Chunk${sourcesDetail.length > 1 ? "s" : ""}`;
+      const cards = document.createElement("div"); cards.className = "sources-cards";
+      sourcesDetail.forEach((src, i) => {
+        const card = document.createElement("div"); card.className = "source-card";
+        const colours = ["#4b9eff", "#2dc97a", "#f5a623"];
+        card.style.borderLeftColor = colours[i] ?? "#4b9eff";
+        card.innerHTML = `
+          <div class="source-card-header">
+            <span class="source-page">📄 Page ${src.page}</span>
+            <span class="source-score">Score: ${src.score}</span>
+          </div>
+          <div class="source-snippet">"${src.snippet}${src.snippet.length >= 220 ? "…" : ""}"</div>`;
+        cards.appendChild(card);
+      });
+      toggle.addEventListener("click", () => {
+        const open = cards.classList.toggle("visible");
+        toggle.classList.toggle("open", open);
+        toggle.querySelector(".chevron").textContent = open ? "▼" : "▶";
+      });
+      srcBlock.appendChild(toggle); srcBlock.appendChild(cards); body.appendChild(srcBlock);
     }
 
-    if (isUser) {
-      wrap.appendChild(body);
-      wrap.appendChild(avatar);
-      wrap.style.flexDirection = "row-reverse";
-    } else {
-      wrap.appendChild(avatar);
-      wrap.appendChild(body);
+    if (followups && followups.length > 0) {
+      const fuBlock = document.createElement("div"); fuBlock.className = "followup-block";
+      const fuLabel = document.createElement("div"); fuLabel.className = "followup-label"; fuLabel.textContent = "💡 You might also ask";
+      const chips = document.createElement("div"); chips.className = "followup-chips";
+      followups.forEach(q => {
+        const chip = document.createElement("button"); chip.className = "chip"; chip.textContent = q;
+        chip.addEventListener("click", () => { chatInput.value = q; chatInput.dispatchEvent(new Event("input")); chatInput.focus(); });
+        chips.appendChild(chip);
+      });
+      fuBlock.appendChild(fuLabel); fuBlock.appendChild(chips); body.appendChild(fuBlock);
     }
 
+    wrap.appendChild(avatar); wrap.appendChild(body);
     chatWindow.appendChild(wrap);
     chatWindow.scrollTop = chatWindow.scrollHeight;
   }
@@ -665,44 +615,21 @@
   function appendThinking() {
     hideEmpty();
     const id = "thinking-" + (++thinkingCounter);
-
-    const wrap = document.createElement("div");
-    wrap.className = "message assistant";
-    wrap.id = id;
-
-    const avatar = document.createElement("div");
-    avatar.className = "msg-avatar assistant";
-    avatar.textContent = "🤖";
-
-    const body = document.createElement("div");
-    body.className = "msg-body";
-
-    const name = document.createElement("div");
-    name.className = "msg-name";
-    name.textContent = "assistant";
-
-    const row = document.createElement("div");
-    row.className = "thinking-row";
+    const wrap = document.createElement("div"); wrap.className = "message assistant"; wrap.id = id;
+    const avatar = document.createElement("div"); avatar.className = "msg-avatar assistant"; avatar.textContent = "🤖";
+    const body = document.createElement("div"); body.className = "msg-body";
+    const name = document.createElement("div"); name.className = "msg-name"; name.textContent = "assistant";
+    const row = document.createElement("div"); row.className = "thinking-row";
     row.innerHTML = `<span class="spinner"></span> Running ${ragMode} logic…`;
-
-    body.appendChild(name);
-    body.appendChild(row);
-    wrap.appendChild(avatar);
-    wrap.appendChild(body);
-
+    body.appendChild(name); body.appendChild(row);
+    wrap.appendChild(avatar); wrap.appendChild(body);
     chatWindow.appendChild(wrap);
     chatWindow.scrollTop = chatWindow.scrollHeight;
     return id;
   }
 
-  function removeThinking(id) {
-    const el = document.getElementById(id);
-    if (el) el.remove();
-  }
-
-  function hideEmpty() {
-    if (emptyState) emptyState.style.display = "none";
-  }
+  function removeThinking(id) { const el = document.getElementById(id); if (el) el.remove(); }
+  function hideEmpty() { if (emptyState) emptyState.style.display = "none"; }
 </script>
 </body>
 </html>
