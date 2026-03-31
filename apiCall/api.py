@@ -3,6 +3,7 @@ import sys
 import shutil
 from fastapi import FastAPI, UploadFile, File, Query, HTTPException
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 
 # Ensure the root project directory is in the path so we can find model.model and model.modelLG
@@ -12,6 +13,13 @@ from model.model import RAGSystem         # Your original Linear RAG file
 from model.modelLG import ArchitectRAG    # Your new LangGraph Agent file
 
 app = FastAPI(title="The Architect RAG API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],      # allows file:// and any origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize both systems
 # Note: Ensure these classes handle their own LLM/Embedding initialization
