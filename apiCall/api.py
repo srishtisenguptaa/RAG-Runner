@@ -73,16 +73,6 @@ async def chat(
 ):
     try:
         if mode == "architect":
-            if architect_rag.vector_db is None:
-                return ChatResponse(
-                    answer="Please upload and index a PDF before using Architect mode.",
-                    sources="None",
-                    sources_detail=[],
-                    followups=[],
-                    mode="Architect Agent",
-                    logs=["Error: No vector database found."]
-                )
-
             agent_app = architect_rag.build_graph()
             result = agent_app.invoke({
                 "question": request.prompt,
@@ -95,13 +85,20 @@ async def chat(
                 "tavily_search" in str(doc.metadata.get("source", ""))
                 for doc in result.get("documents", [])
             )
+            has_pdf = architect_rag.vector_db is not None
+            if used_web and has_pdf:
+                sources_label = "PDF + Web Search"
+            elif used_web:
+                sources_label = "Web Search Only"
+            else:
+                sources_label = "PDF Only"
 
             # Generate follow-ups for Architect mode too
             followups = standard_rag.generate_followups(request.prompt, answer)
 
             return ChatResponse(
                 answer=answer,
-                sources="PDF + Web Search" if used_web else "PDF Only",
+                sources=sources_label,
                 sources_detail=[],   # Architect doesn't expose chunk-level detail
                 followups=followups,
                 mode="Architect Agent",
@@ -109,6 +106,16 @@ async def chat(
             )
 
         # ── Standard mode ──────────────────────────────────────────
+        if standard_rag.vector_db is None:
+            return ChatResponse(
+                answer="Please upload a PDF before using Standard mode.",
+                sources="None",
+                sources_detail=[],
+                followups=[],
+                mode="Standard RAG",
+                logs=["Error: No PDF uploaded. Standard mode requires a document."]
+            )
+
         result = standard_rag.ask_with_sources(request.prompt)
         answer = result["answer"]
         raw_sources = result["sources"]   # list of {page, snippet, score}

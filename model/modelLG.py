@@ -48,6 +48,13 @@ class ArchitectRAG:
     # --- Nodes (Logic remains identical, just uses Groq) ---
     def retrieve(self, state: GraphState):
         question = state["question"]
+        if self.vector_db is None:
+            # No PDF uploaded — skip retrieval; grader will trigger web search
+            return {
+                "documents": [],
+                "question": question,
+                "logs": ["No PDF indexed. Skipping retrieval — will fall back to web search."]
+            }
         documents = self.vector_db.similarity_search(question)
         return {"documents": documents, "question": question, "logs": ["Retrieved PDF context."]}
 
