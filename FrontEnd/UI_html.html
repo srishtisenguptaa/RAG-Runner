@@ -401,6 +401,21 @@
   let ragMode = "standard";
   let isLoading = false;
 
+  // ── Session ID: unique per page-load (refresh = new session = cleared memory) ──
+  let SESSION_ID = localStorage.getItem("rag_session_id");
+
+  if (SESSION_ID) {
+    // If we have an old ID, tell the backend to wipe it before we start fresh
+    fetch(`${API}/history/${SESSION_ID}`, { method: "DELETE" }).catch(() => {});
+  }
+
+  // Generate a brand new ID for this new session and save it
+  SESSION_ID = crypto.randomUUID();
+  localStorage.setItem("rag_session_id", SESSION_ID);
+
+  // Tell the backend to wipe any stale history for this session slot
+  fetch(`${API}/history/${SESSION_ID}`, { method: "DELETE" }).catch(() => {});
+
   const chatWindow   = document.getElementById("chat-window");
   const emptyState   = document.getElementById("empty-state");
   const chatInput    = document.getElementById("chat-input");
@@ -518,7 +533,7 @@
       const res = await fetch(`${API}/chat?mode=${ragMode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text })
+        body: JSON.stringify({ prompt: text, session_id: SESSION_ID })
       });
       removeThinking(thinkingId);
       if (res.ok) {
