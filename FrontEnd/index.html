@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Architect RAG</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Top Bar ── -->
+  <header id="topbar">
+    <h1>📚 Intelligent Research Assistant</h1>
+    <div class="theme-toggle-wrap">
+      <span class="theme-label" id="theme-label">Dark</span>
+      <label class="theme-toggle" title="Toggle light / dark mode">
+        <input type="checkbox" id="theme-checkbox" />
+        <div class="theme-track">
+          <div class="theme-icons">
+            <span class="theme-icon">🌙</span>
+            <span class="theme-icon">☀️</span>
+          </div>
+        </div>
+      </label>
+    </div>
+  </header>
+
+  <div id="body-row">
+
+    <!-- ── Sidebar ── -->
+    <aside id="sidebar">
+      <div class="sidebar-header">⚙️ Configuration</div>
+
+      <!-- Radio label + tooltip -->
+      <div class="radio-label-row">
+        <span class="radio-label">Select RAG Engine:</span>
+        <div class="tooltip-wrap">
+          <div class="tooltip-icon">?</div>
+          <div class="tooltip-box">
+            <strong>Standard:</strong> Fast, PDF-only retrieval.<br><br>
+            <strong>Architect:</strong> Advanced, self-correcting agent with Web Search fallback.
+          </div>
+        </div>
+      </div>
+
+      <div class="radio-group" id="rag-mode-group">
+        <label class="radio-option selected" data-value="standard">
+          <input type="radio" name="rag_mode" value="standard" checked />
+          <span>Standard</span>
+        </label>
+        <label class="radio-option" data-value="architect">
+          <input type="radio" name="rag_mode" value="architect" />
+          <span>Architect</span>
+        </label>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="upload-section" id="upload-section">
+        <div class="upload-label-row">
+          <span class="upload-label">Upload a PDF Document</span>
+          <span class="optional-badge" id="optional-badge">Optional</span>
+        </div>
+        <div id="drop-zone">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a3a8b8" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+          <p><strong>Drag & drop</strong> or <strong style="color:var(--accent);cursor:pointer" onclick="document.getElementById('file-input').click()">browse</strong><br>PDF files only</p>
+        </div>
+        <input type="file" id="file-input" accept=".pdf" />
+        <div id="file-name"></div>
+        <button class="btn btn-primary" id="index-btn" disabled>Index Document</button>
+        <div id="index-status"></div>
+      </div><!-- /upload-section -->
+    </aside>
+
+    <!-- ── Main ── -->
+    <div id="main">
+      <div id="chat-window">
+        <div id="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <p id="empty-text">Upload a PDF and ask a question to get started.</p>
+        </div>
+      </div>
+
+      <div id="input-bar">
+        <div id="input-wrapper">
+          <textarea id="chat-input" rows="1" placeholder="Ask a question..."></textarea>
+          <button id="send-btn" title="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /body-row -->
+</div><!-- /app -->
+
+<script src="main.js"></script>
+</body>
+</html>
