@@ -9,7 +9,6 @@
 <body>
 <div id="app">
 
-  <!-- ── Top Bar ── -->
   <header id="topbar">
     <h1>📚 Intelligent Research Assistant</h1>
     <div class="theme-toggle-wrap">
@@ -27,19 +26,16 @@
   </header>
 
   <div id="body-row">
-
-    <!-- ── Sidebar ── -->
     <aside id="sidebar">
       <div class="sidebar-header">⚙️ Configuration</div>
 
-      <!-- Radio label + tooltip -->
       <div class="radio-label-row">
         <span class="radio-label">Select RAG Engine:</span>
         <div class="tooltip-wrap">
           <div class="tooltip-icon">?</div>
           <div class="tooltip-box">
-            <strong>Standard:</strong> Fast, PDF-only retrieval.<br><br>
-            <strong>Architect:</strong> Advanced, self-correcting agent with Web Search fallback.
+            <strong>Standard:</strong> Fast, file-based retrieval.<br><br>
+            <strong>Architect:</strong> Self-correcting agent with Web Search fallback.
           </div>
         </div>
       </div>
@@ -59,9 +55,16 @@
 
       <div class="upload-section" id="upload-section">
         <div class="upload-label-row">
-          <span class="upload-label">Upload a PDF Document</span>
+          <span class="upload-label">Upload Files</span>
           <span class="optional-badge" id="optional-badge">Optional</span>
         </div>
+
+        <div class="filetype-badges">
+          <span class="ftype-badge pdf">📄 PDF</span>
+          <span class="ftype-badge excel">📊 Excel</span>
+          <span class="ftype-badge csv">📋 CSV</span>
+        </div>
+
         <div id="drop-zone">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a3a8b8" stroke-width="1.5">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -69,29 +72,42 @@
             <line x1="12" y1="18" x2="12" y2="12"/>
             <line x1="9" y1="15" x2="15" y2="15"/>
           </svg>
-          <p><strong>Drag & drop</strong> or <strong style="color:var(--accent);cursor:pointer" onclick="document.getElementById('file-input').click()">browse</strong><br>PDF files only</p>
+          <p><strong>Drag & drop</strong> or <strong style="color:var(--accent);cursor:pointer" onclick="document.getElementById('file-input').click()">browse</strong><br>PDF, XLSX, XLS, CSV</p>
         </div>
-        <input type="file" id="file-input" accept=".pdf" />
-        <div id="file-name"></div>
-        <button class="btn btn-primary" id="index-btn" disabled>Index Document</button>
+        <input type="file" id="file-input" accept=".pdf,.xlsx,.xls,.xlsm,.csv" multiple />
+
+        <div id="file-queue"></div>
+
+        <button class="btn btn-primary" id="index-btn" disabled>Index Selected Files</button>
         <div id="index-status"></div>
-      </div><!-- /upload-section -->
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="indexed-section">
+        <div class="sidebar-sub-header">
+          <span>📂 Indexed Files</span>
+          <span id="file-count-badge" class="count-badge">0</span>
+        </div>
+        <div id="indexed-files-list">
+          <div class="no-files-msg">No files indexed yet.</div>
+        </div>
+      </div>
     </aside>
 
-    <!-- ── Main ── -->
     <div id="main">
       <div id="chat-window">
         <div id="empty-state">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
-          <p id="empty-text">Upload a PDF and ask a question to get started.</p>
+          <p id="empty-text">Upload PDF or Excel files and ask a question to get started.</p>
         </div>
       </div>
 
       <div id="input-bar">
         <div id="input-wrapper">
-          <textarea id="chat-input" rows="1" placeholder="Ask a question..."></textarea>
+          <textarea id="chat-input" rows="1" placeholder="Ask a question about your indexed files…"></textarea>
           <button id="send-btn" title="Send">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/>
@@ -101,10 +117,8 @@
         </div>
       </div>
     </div>
-
-  </div><!-- /body-row -->
-</div><!-- /app -->
-
+  </div>
+</div>
 <script src="main.js"></script>
 </body>
 </html>
