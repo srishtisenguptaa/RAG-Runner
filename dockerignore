@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+.env
+*.faiss
+*.pkl
+temp_*
+.git
+.gitignore
+*.md

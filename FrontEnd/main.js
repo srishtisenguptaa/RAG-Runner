@@ -1,4 +1,13 @@
-const API = "http://localhost:8000";
+// Auto-detect environment:
+// - file:// or localhost → talk directly to FastAPI on port 8000
+// - nginx/docker (port 80) → use relative /api proxy
+const _proto = window.location.protocol;
+const _host  = window.location.hostname;
+const _port  = window.location.port;
+const API = (_proto === "file:" || _host === "localhost" || _host === "127.0.0.1")
+  ? "http://127.0.0.1:8000"   // local dev
+  : "/api";                   // docker / production (nginx proxy)
+
 let ragMode   = "standard";
 let isLoading = false;
 

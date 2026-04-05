@@ -1,0 +1,8 @@
+FROM nginx:alpine
+
+COPY FrontEnd/index.html  /usr/share/nginx/html/index.html
+COPY FrontEnd/main.js     /usr/share/nginx/html/main.js
+COPY FrontEnd/styles.css  /usr/share/nginx/html/styles.css
+COPY nginx.conf           /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

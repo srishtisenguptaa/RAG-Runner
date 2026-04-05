@@ -1,33 +1,32 @@
-# Document Parsing
-pypdf
+# API
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+pydantic==2.10.3
 
-# LangChain Core and Community
-langchain
-langchain-community
-# langchain-ollama
-langchain-experimental
-langgraph
-tavily-python 
-dotenv
-langchain_tavily
-langchain_huggingface
-langchain_groq
-# Vector Store and Math
-faiss-cpu
-numpy
+# LangChain — let pip resolve compatible versions
+langchain>=0.3.13
+langchain-core>=0.3.29
+langchain-community>=0.3.13
+langchain-text-splitters>=0.3.4
+langchain-huggingface>=0.1.2
+langchain-groq>=0.2.3
+langchain-classic>=1.0.3
+langgraph>=0.2.60
 
-# Optional but recommended for performance
-tiktoken
-sentence-transformers 
-#Fastapi
-fastapi
-uvicorn
+# LLM / Search
+groq>=0.13.0
+langchain-tavily>=0.1.6
 
-#STREAMLIT
-streamlit
+# Vector store & embeddings
+faiss-cpu==1.9.0
+sentence-transformers>=3.3.1
 
-python-multipart
-openpyxl>=3.1.0
+# Document loaders
+pypdf>=5.1.0
+openpyxl>=3.1.5
+pandas>=2.2.3
+xlrd>=2.0.1
 
-#api call : uvicorn apiCall.api:app --reload
-#streamil: streamlit run FrontEnd\UI.py
+# Utilities
+python-dotenv>=1.0.1

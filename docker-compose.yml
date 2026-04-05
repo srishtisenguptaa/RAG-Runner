@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+
+  # ── FastAPI Backend ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: architect-rag-backend
+    restart: unless-stopped
+    env_file: .env                   # GROQ_API_KEY, TAVILY_API_KEY go here
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - tmp_data:/app/tmp            # temp upload scratch space
+    networks:
+      - rag-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Nginx Frontend ───────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: architect-rag-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"                      # Access the app at http://localhost
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - rag-net
+
+volumes:
+  tmp_data:
+
+networks:
+  rag-net:
+    driver: bridge
