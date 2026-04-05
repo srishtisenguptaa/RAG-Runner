@@ -5,6 +5,9 @@ from fastapi import FastAPI, UploadFile, File, Query, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Any
+import tempfile
+import gc
+import time
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -80,10 +83,13 @@ async def upload_file(file: UploadFile = File(...)):
             detail=f"Unsupported file type '{ext}'. Supported: PDF, XLSX, XLS, XLSM, CSV"
         )
 
-    temp_path = f"temp_{original_name}"
+    # Use a temp file with delete=False so we control deletion
+    tmp = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
+    temp_path = tmp.name
     try:
-        with open(temp_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # Write uploaded bytes and CLOSE the handle before processing
+        with tmp:
+            shutil.copyfileobj(file.file, tmp)
 
         chunks = standard_rag.process_file(temp_path, original_name)
         architect_rag.process_file(temp_path, original_name)
@@ -101,10 +107,16 @@ async def upload_file(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Indexing failed: {str(e)}")
     finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        gc.collect()  # Force release any lingering file handles
+        for _ in range(5):
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                break
+            except PermissionError:
+                time.sleep(0.2)  # Wait briefly for Windows to release the lock
 
-
+                
 @app.delete("/files/{filename}")
 async def remove_file(filename: str):
     standard_rag.remove_file(filename)

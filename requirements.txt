@@ -27,6 +27,7 @@ uvicorn
 streamlit
 
 python-multipart
+openpyxl>=3.1.0
 
 #api call : uvicorn apiCall.api:app --reload
 #streamil: streamlit run FrontEnd\UI.py
