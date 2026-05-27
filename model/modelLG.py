@@ -66,6 +66,7 @@ class ArchitectRAG:
         self.vector_db = None
         self.indexed_files: dict[str, dict] = {}
         self._history_store: dict[str, ChatMessageHistory] = {}
+        self._graph = None  # cached compiled graph
 
     # ── History helpers ────────────────────────────────────────────────────────
 
@@ -167,29 +168,51 @@ class ArchitectRAG:
         }
 
     def grade_documents(self, state: GraphState):
-        question = state["question"]
+        question  = state["question"]
         documents = state["documents"]
         filtered_docs = []
         web_search    = "No"
 
+        # If no docs were retrieved at all (no files indexed), go straight to web search
+        if not documents:
+            return {
+                "documents": [], "question": question, "web_search": "Yes",
+                "logs": state.get("logs", []) + ["[Grade Agent] No documents to grade — triggering web search."]
+            }
+
         grader_prompt = ChatPromptTemplate.from_template(
-            "Respond ONLY with 'yes' or 'no'. Is this document relevant to '{question}'?\nDoc: {doc}"
+            "You are a relevance grader. A user asked: '{question}'\n"
+            "The document below was retrieved from the user's uploaded files (PDF, CV, spreadsheet, report, etc).\n"
+            "Answer ONLY 'yes' if this document contains ANY information that could help answer the question "
+            "(even partially), or 'no' if it is completely unrelated.\n\n"
+            "Document:\n{doc}\n\n"
+            "Answer (yes/no):"
         )
         grader_chain = grader_prompt | self.llm
 
         for d in documents:
-            score = grader_chain.invoke({"question": question, "doc": d.page_content})
-            if "yes" in score.content.lower():
+            try:
+                score = grader_chain.invoke({"question": question, "doc": d.page_content[:1500]})
+                if "yes" in score.content.lower():
+                    filtered_docs.append(d)
+            except Exception:
+                # On grader error, keep the doc (fail-open)
                 filtered_docs.append(d)
 
-        if not filtered_docs:
+        # If grader rejected everything BUT we have indexed files, keep top-2 anyway.
+        # This prevents vague/short queries from always falling to web search.
+        if not filtered_docs and self.vector_db is not None:
+            filtered_docs = documents[:2]
+            log_note = f"[Grade Agent] Grader rejected all chunks — keeping top-2 from local index to avoid unnecessary web search."
+        elif not filtered_docs:
             web_search = "Yes"
+            log_note = f"[Grade Agent] 0 relevant chunk(s) kept. Triggering web search."
+        else:
+            log_note = f"[Grade Agent] {len(filtered_docs)} relevant chunk(s) kept. Web search: No"
 
         return {
-            "documents": filtered_docs, "web_search": web_search,
-            "logs": state.get("logs", []) + [
-                f"[Grade Agent] {len(filtered_docs)} relevant chunk(s) kept. Web search: {web_search}"
-            ]
+            "documents": filtered_docs, "question": question, "web_search": web_search,
+            "logs": state.get("logs", []) + [log_note]
         }
 
     def web_search(self, state: GraphState):
@@ -243,6 +266,8 @@ class ArchitectRAG:
         return "search_web" if state["web_search"] == "Yes" else "generate"
 
     def build_graph(self):
+        if self._graph is not None:
+            return self._graph
         workflow = StateGraph(GraphState)
         workflow.add_node("retrieve",        self.retrieve)
         workflow.add_node("grade_documents", self.grade_documents)
@@ -256,4 +281,5 @@ class ArchitectRAG:
         )
         workflow.add_edge("web_search", "generate")
         workflow.add_edge("generate", END)
-        return workflow.compile()
+        self._graph = workflow.compile()
+        return self._graph
