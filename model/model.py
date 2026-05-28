@@ -57,157 +57,157 @@ class RAGSystem:
         self.indexed_files: dict[str, dict] = {}
         self._history_store: dict[str, ChatMessageHistory] = {}
 
-@property
-def embeddings(self):
-    if self._embeddings is None:
-        self._embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    return self._embeddings
+        @property
+        def embeddings(self):
+            if self._embeddings is None:
+                self._embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+            return self._embeddings
 
-    def _get_session_history(self, session_id: str) -> ChatMessageHistory:
-        if session_id not in self._history_store:
-            self._history_store[session_id] = ChatMessageHistory()
-        return self._history_store[session_id]
+        def _get_session_history(self, session_id: str) -> ChatMessageHistory:
+            if session_id not in self._history_store:
+                self._history_store[session_id] = ChatMessageHistory()
+            return self._history_store[session_id]
 
-    def clear_history(self, session_id: str):
-        self._history_store.pop(session_id, None)
+        def clear_history(self, session_id: str):
+            self._history_store.pop(session_id, None)
 
-    def _rebuild_chain(self):
-        system_prompt = (
-            "You are a helpful research assistant. "
-            "Use the provided context from indexed documents to answer the user's question. "
-            "Documents may include PDFs and/or Excel spreadsheets (tabular data). "
-            "When answering about spreadsheet data, reference column names, row values, "
-            "sheet names, and numeric summaries where relevant. "
-            "If the context doesn't contain the answer, say so honestly. "
-            "You have access to conversation history to understand follow-up questions.\n\n"
-            "Context:\n{context}"
-        )
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            MessagesPlaceholder("chat_history"),
-            ("human", "{input}"),
-        ])
-        qa_chain   = create_stuff_documents_chain(self.llm, prompt)
-        base_chain = create_retrieval_chain(self.vector_db.as_retriever(), qa_chain)
-        self.rag_chain = RunnableWithMessageHistory(
-            base_chain,
-            self._get_session_history,
-            input_messages_key="input",
-            history_messages_key="chat_history",
-            output_messages_key="answer",
-        )
+        def _rebuild_chain(self):
+            system_prompt = (
+                "You are a helpful research assistant. "
+                "Use the provided context from indexed documents to answer the user's question. "
+                "Documents may include PDFs and/or Excel spreadsheets (tabular data). "
+                "When answering about spreadsheet data, reference column names, row values, "
+                "sheet names, and numeric summaries where relevant. "
+                "If the context doesn't contain the answer, say so honestly. "
+                "You have access to conversation history to understand follow-up questions.\n\n"
+                "Context:\n{context}"
+            )
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", system_prompt),
+                MessagesPlaceholder("chat_history"),
+                ("human", "{input}"),
+            ])
+            qa_chain   = create_stuff_documents_chain(self.llm, prompt)
+            base_chain = create_retrieval_chain(self.vector_db.as_retriever(), qa_chain)
+            self.rag_chain = RunnableWithMessageHistory(
+                base_chain,
+                self._get_session_history,
+                input_messages_key="input",
+                history_messages_key="chat_history",
+                output_messages_key="answer",
+            )
 
-    def process_pdf(self, file_path: str, filename: str = None) -> int:
-        fname  = filename or os.path.basename(file_path)
-        loader = PyPDFLoader(file_path)
-        docs   = loader.load()
-        for doc in docs:
-            doc.metadata["source_file"] = fname
-            doc.metadata["file_type"]   = "pdf"
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        chunks   = splitter.split_documents(docs)
-        self._upsert_chunks(chunks)
-        self.indexed_files[fname] = {"type": "pdf", "chunks": len(chunks), "sheets": []}
-        self._rebuild_chain()
-        return len(chunks)
+        def process_pdf(self, file_path: str, filename: str = None) -> int:
+            fname  = filename or os.path.basename(file_path)
+            loader = PyPDFLoader(file_path)
+            docs   = loader.load()
+            for doc in docs:
+                doc.metadata["source_file"] = fname
+                doc.metadata["file_type"]   = "pdf"
+            splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+            chunks   = splitter.split_documents(docs)
+            self._upsert_chunks(chunks)
+            self.indexed_files[fname] = {"type": "pdf", "chunks": len(chunks), "sheets": []}
+            self._rebuild_chain()
+            return len(chunks)
 
-    def process_excel(self, file_path: str, filename: str = None) -> int:
-        fname = filename or os.path.basename(file_path)
-        ext   = os.path.splitext(file_path)[1].lower()
-        try:
-            sheet_names = ["Sheet1"] if ext == ".csv" else pd.ExcelFile(file_path).sheet_names
-        except Exception:
-            sheet_names = []
-        raw_text = extract_excel_text(file_path)
-        doc = Document(
-            page_content=raw_text,
-            metadata={
-                "source": fname, "source_file": fname,
-                "file_type": "excel", "sheets": ", ".join(sheet_names),
-            }
-        )
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
-        chunks   = splitter.split_documents([doc])
-        self._upsert_chunks(chunks)
-        self.indexed_files[fname] = {"type": "excel", "chunks": len(chunks), "sheets": sheet_names}
-        self._rebuild_chain()
-        return len(chunks)
+        def process_excel(self, file_path: str, filename: str = None) -> int:
+            fname = filename or os.path.basename(file_path)
+            ext   = os.path.splitext(file_path)[1].lower()
+            try:
+                sheet_names = ["Sheet1"] if ext == ".csv" else pd.ExcelFile(file_path).sheet_names
+            except Exception:
+                sheet_names = []
+            raw_text = extract_excel_text(file_path)
+            doc = Document(
+                page_content=raw_text,
+                metadata={
+                    "source": fname, "source_file": fname,
+                    "file_type": "excel", "sheets": ", ".join(sheet_names),
+                }
+            )
+            splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+            chunks   = splitter.split_documents([doc])
+            self._upsert_chunks(chunks)
+            self.indexed_files[fname] = {"type": "excel", "chunks": len(chunks), "sheets": sheet_names}
+            self._rebuild_chain()
+            return len(chunks)
 
-    def process_file(self, file_path: str, filename: str = None) -> int:
-        fname = (filename or os.path.basename(file_path)).lower()
-        if fname.endswith(".pdf"):
-            return self.process_pdf(file_path, filename or os.path.basename(file_path))
-        elif fname.endswith((".xlsx", ".xls", ".xlsm", ".csv")):
-            return self.process_excel(file_path, filename or os.path.basename(file_path))
-        else:
-            raise ValueError(f"Unsupported file type: {os.path.splitext(fname)[1]}")
+        def process_file(self, file_path: str, filename: str = None) -> int:
+            fname = (filename or os.path.basename(file_path)).lower()
+            if fname.endswith(".pdf"):
+                return self.process_pdf(file_path, filename or os.path.basename(file_path))
+            elif fname.endswith((".xlsx", ".xls", ".xlsm", ".csv")):
+                return self.process_excel(file_path, filename or os.path.basename(file_path))
+            else:
+                raise ValueError(f"Unsupported file type: {os.path.splitext(fname)[1]}")
 
-    def _upsert_chunks(self, chunks):
-        if self.vector_db is None:
-            self.vector_db = FAISS.from_documents(chunks, self.embeddings)
-        else:
-            self.vector_db.add_documents(chunks)
+        def _upsert_chunks(self, chunks):
+            if self.vector_db is None:
+                self.vector_db = FAISS.from_documents(chunks, self.embeddings)
+            else:
+                self.vector_db.add_documents(chunks)
 
-    def remove_file(self, filename: str):
-        if filename not in self.indexed_files:
-            return
-        del self.indexed_files[filename]
-        if not self.indexed_files:
-            self.vector_db = None; self.rag_chain = None; return
-        remaining_docs = [
-            doc for _, doc in self.vector_db.docstore._dict.items()
-            if doc.metadata.get("source_file") != filename
-        ]
-        if not remaining_docs:
-            self.vector_db = None; self.rag_chain = None; return
-        self.vector_db = FAISS.from_documents(remaining_docs, self.embeddings)
-        self._rebuild_chain()
+        def remove_file(self, filename: str):
+            if filename not in self.indexed_files:
+                return
+            del self.indexed_files[filename]
+            if not self.indexed_files:
+                self.vector_db = None; self.rag_chain = None; return
+            remaining_docs = [
+                doc for _, doc in self.vector_db.docstore._dict.items()
+                if doc.metadata.get("source_file") != filename
+            ]
+            if not remaining_docs:
+                self.vector_db = None; self.rag_chain = None; return
+            self.vector_db = FAISS.from_documents(remaining_docs, self.embeddings)
+            self._rebuild_chain()
 
-    def ask_with_sources(self, question: str, session_id: str = "default") -> dict:
-        if not self.rag_chain or not self.vector_db:
-            return {"answer": "Please upload at least one file first.", "sources": []}
-        result = self.rag_chain.invoke(
-            {"input": question},
-            config={"configurable": {"session_id": session_id}}
-        )
-        answer = result["answer"]
-        docs_with_scores = self.vector_db.similarity_search_with_score(question, k=3)
-        sources = []
-        for doc, score in docs_with_scores:
-            raw_page    = doc.metadata.get("page", None)
-            page_num    = (int(raw_page) + 1) if raw_page is not None else "N/A"
-            source_file = doc.metadata.get("source_file", doc.metadata.get("source", "unknown"))
-            sources.append({
-                "page":        page_num,
-                "snippet":     doc.page_content[:220].strip(),
-                "score":       round(float(score), 3),
-                "source_file": source_file,
-                "file_type":   doc.metadata.get("file_type", "pdf"),
-                "sheets":      doc.metadata.get("sheets", ""),
-            })
-        return {"answer": answer, "sources": sources}
+        def ask_with_sources(self, question: str, session_id: str = "default") -> dict:
+            if not self.rag_chain or not self.vector_db:
+                return {"answer": "Please upload at least one file first.", "sources": []}
+            result = self.rag_chain.invoke(
+                {"input": question},
+                config={"configurable": {"session_id": session_id}}
+            )
+            answer = result["answer"]
+            docs_with_scores = self.vector_db.similarity_search_with_score(question, k=3)
+            sources = []
+            for doc, score in docs_with_scores:
+                raw_page    = doc.metadata.get("page", None)
+                page_num    = (int(raw_page) + 1) if raw_page is not None else "N/A"
+                source_file = doc.metadata.get("source_file", doc.metadata.get("source", "unknown"))
+                sources.append({
+                    "page":        page_num,
+                    "snippet":     doc.page_content[:220].strip(),
+                    "score":       round(float(score), 3),
+                    "source_file": source_file,
+                    "file_type":   doc.metadata.get("file_type", "pdf"),
+                    "sheets":      doc.metadata.get("sheets", ""),
+                })
+            return {"answer": answer, "sources": sources}
 
-    def generate_followups(self, question: str, answer: str) -> list[str]:
-        prompt = (
-            f"Given this Q&A from indexed PDFs and/or Excel sheets, suggest exactly 3 short "
-            f"follow-up questions. Return ONLY the questions, one per line, no numbering.\n\n"
-            f"Question: {question}\nAnswer: {answer}"
-        )
-        try:
-            raw = self.llm.invoke(prompt).content
-            return [q.strip() for q in raw.strip().split("\n") if q.strip()][:3]
-        except Exception:
-            return []
+        def generate_followups(self, question: str, answer: str) -> list[str]:
+            prompt = (
+                f"Given this Q&A from indexed PDFs and/or Excel sheets, suggest exactly 3 short "
+                f"follow-up questions. Return ONLY the questions, one per line, no numbering.\n\n"
+                f"Question: {question}\nAnswer: {answer}"
+            )
+            try:
+                raw = self.llm.invoke(prompt).content
+                return [q.strip() for q in raw.strip().split("\n") if q.strip()][:3]
+            except Exception:
+                return []
 
-    def get_history_as_dicts(self, session_id: str) -> list[dict]:
-        history = self._get_session_history(session_id)
-        result  = []
-        for msg in history.messages:
-            if isinstance(msg, HumanMessage):
-                result.append({"role": "user", "content": msg.content})
-            elif isinstance(msg, AIMessage):
-                result.append({"role": "assistant", "content": msg.content})
-        return result
+        def get_history_as_dicts(self, session_id: str) -> list[dict]:
+            history = self._get_session_history(session_id)
+            result  = []
+            for msg in history.messages:
+                if isinstance(msg, HumanMessage):
+                    result.append({"role": "user", "content": msg.content})
+                elif isinstance(msg, AIMessage):
+                    result.append({"role": "assistant", "content": msg.content})
+            return result
 
-    def get_indexed_files(self) -> list[dict]:
-        return [{"filename": f, **m} for f, m in self.indexed_files.items()]
+        def get_indexed_files(self) -> list[dict]:
+            return [{"filename": f, **m} for f, m in self.indexed_files.items()]
