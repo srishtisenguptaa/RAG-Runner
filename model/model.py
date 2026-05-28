@@ -45,8 +45,8 @@ def extract_excel_text(file_path: str) -> str:
 # ── RAGSystem ──────────────────────────────────────────────────────────────────
 
 class RAGSystem:
-    def __init__(self):
-        self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+   def __init__(self):
+        self._embeddings = None
         self.llm = ChatGroq(
             model="llama-3.3-70b-versatile",
             temperature=0,
@@ -56,6 +56,12 @@ class RAGSystem:
         self.rag_chain = None
         self.indexed_files: dict[str, dict] = {}
         self._history_store: dict[str, ChatMessageHistory] = {}
+
+@property
+def embeddings(self):
+    if self._embeddings is None:
+        self._embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return self._embeddings
 
     def _get_session_history(self, session_id: str) -> ChatMessageHistory:
         if session_id not in self._history_store:
