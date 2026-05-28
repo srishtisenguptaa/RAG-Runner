@@ -62,16 +62,17 @@ class ArchitectRAG:
             temperature=0,
             groq_api_key=os.getenv("GROQ_API_KEY")
         )
+        self.web_search_tool = TavilySearch(max_results=3)
         self.vector_db = None
-        # self.rag_chain = None
         self.indexed_files: dict[str, dict] = {}
         self._history_store: dict[str, ChatMessageHistory] = {}
+        self._graph = None
 
-        @property
-        def embeddings(self):
-            if self._embeddings is None:
-                self._embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-            return self._embeddings
+    @property
+    def embeddings(self):
+        if self._embeddings is None:
+            self._embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        return self._embeddings
 
     # ── History helpers ────────────────────────────────────────────────────────
 
@@ -178,7 +179,6 @@ class ArchitectRAG:
         filtered_docs = []
         web_search    = "No"
 
-        # If no docs were retrieved at all (no files indexed), go straight to web search
         if not documents:
             return {
                 "documents": [], "question": question, "web_search": "Yes",
@@ -201,17 +201,14 @@ class ArchitectRAG:
                 if "yes" in score.content.lower():
                     filtered_docs.append(d)
             except Exception:
-                # On grader error, keep the doc (fail-open)
                 filtered_docs.append(d)
 
-        # If grader rejected everything BUT we have indexed files, keep top-2 anyway.
-        # This prevents vague/short queries from always falling to web search.
         if not filtered_docs and self.vector_db is not None:
             filtered_docs = documents[:2]
-            log_note = f"[Grade Agent] Grader rejected all chunks — keeping top-2 from local index to avoid unnecessary web search."
+            log_note = "[Grade Agent] Grader rejected all chunks — keeping top-2 from local index."
         elif not filtered_docs:
             web_search = "Yes"
-            log_note = f"[Grade Agent] 0 relevant chunk(s) kept. Triggering web search."
+            log_note = "[Grade Agent] 0 relevant chunk(s) kept. Triggering web search."
         else:
             log_note = f"[Grade Agent] {len(filtered_docs)} relevant chunk(s) kept. Web search: No"
 
@@ -242,8 +239,8 @@ class ArchitectRAG:
         }
 
     def generate(self, state: GraphState):
-        context     = "\n\n".join([d.page_content for d in state["documents"]])
-        sources     = {d.metadata.get("source_file", d.metadata.get("source", "unknown")) for d in state["documents"]}
+        context      = "\n\n".join([d.page_content for d in state["documents"]])
+        sources      = {d.metadata.get("source_file", d.metadata.get("source", "unknown")) for d in state["documents"]}
         chat_history = state.get("chat_history", [])
 
         prompt = ChatPromptTemplate.from_messages([
