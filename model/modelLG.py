@@ -63,15 +63,15 @@ class ArchitectRAG:
             groq_api_key=os.getenv("GROQ_API_KEY")
         )
         self.vector_db = None
-        self.rag_chain = None
+        # self.rag_chain = None
         self.indexed_files: dict[str, dict] = {}
         self._history_store: dict[str, ChatMessageHistory] = {}
 
-@property
-def embeddings(self):
-    if self._embeddings is None:
-        self._embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    return self._embeddings
+    @property
+    def embeddings(self):
+        if self._embeddings is None:
+            self._embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        return self._embeddings
 
     # ── History helpers ────────────────────────────────────────────────────────
 
