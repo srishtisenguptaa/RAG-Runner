@@ -45,17 +45,17 @@ def extract_excel_text(file_path: str) -> str:
 # ── RAGSystem ──────────────────────────────────────────────────────────────────
 
 class RAGSystem:
-    def __init__(self):
-        self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        self.llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
-            temperature=0,
-            groq_api_key=os.getenv("GROQ_API_KEY")
-        )
-        self.vector_db = None
-        self.rag_chain = None
-        self.indexed_files: dict[str, dict] = {}
-        self._history_store: dict[str, ChatMessageHistory] = {}
+   def __init__(self):
+    self._embeddings = None
+    self.llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        temperature=0,
+        groq_api_key=os.getenv("GROQ_API_KEY")
+    )
+    self.vector_db = None
+    self.rag_chain = None
+    self.indexed_files: dict[str, dict] = {}
+    self._history_store: dict[str, ChatMessageHistory] = {}
 
     def _get_session_history(self, session_id: str) -> ChatMessageHistory:
         if session_id not in self._history_store:

@@ -56,17 +56,16 @@ class GraphState(TypedDict):
 
 class ArchitectRAG:
     def __init__(self):
-        self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        self.llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
-            temperature=0,
-            groq_api_key=os.getenv("GROQ_API_KEY")
-        )
-        self.web_search_tool = TavilySearch(max_results=3)
-        self.vector_db = None
-        self.indexed_files: dict[str, dict] = {}
-        self._history_store: dict[str, ChatMessageHistory] = {}
-        self._graph = None  # cached compiled graph
+    self._embeddings = None
+    self.llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        temperature=0,
+        groq_api_key=os.getenv("GROQ_API_KEY")
+    )
+    self.vector_db = None
+    self.rag_chain = None
+    self.indexed_files: dict[str, dict] = {}
+    self._history_store: dict[str, ChatMessageHistory] = {}
 
     # ── History helpers ────────────────────────────────────────────────────────
 
