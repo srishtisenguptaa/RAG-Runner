@@ -10,7 +10,17 @@
 <div id="app">
 
   <header id="topbar">
+    <!-- Hamburger — only visible on mobile -->
+    <button id="sidebar-toggle" aria-label="Toggle sidebar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
     <h1>📚 Intelligent Research Assistant</h1>
+
     <div class="theme-toggle-wrap">
       <span class="theme-label" id="theme-label">Dark</span>
       <label class="theme-toggle" title="Toggle light / dark mode">
@@ -24,6 +34,9 @@
       </label>
     </div>
   </header>
+
+  <!-- Overlay for mobile sidebar -->
+  <div id="sidebar-overlay"></div>
 
   <div id="body-row">
     <aside id="sidebar">
@@ -120,5 +133,26 @@
   </div>
 </div>
 <script src="main.js"></script>
+<script>
+  // Mobile sidebar toggle
+  const sidebarToggle  = document.getElementById('sidebar-toggle');
+  const sidebar        = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+  function openSidebar()  { sidebar.classList.add('open');  sidebarOverlay.classList.add('visible'); }
+  function closeSidebar() { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('visible'); }
+
+  sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+  sidebarOverlay.addEventListener('click', closeSidebar);
+
+  // Close sidebar when a radio option is selected on mobile
+  document.querySelectorAll('.radio-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      if (window.innerWidth <= 640) closeSidebar();
+    });
+  });
+</script>
 </body>
 </html>
