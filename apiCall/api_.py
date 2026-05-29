@@ -19,27 +19,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"], allow_headers=["*"],
 )
 
-# ── Per-session RAG instances ──────────────────────────────────────────────────
-_standard_sessions: dict[str, RAGSystem] = {}
-_architect_sessions: dict[str, ArchitectRAG] = {}
-
-def get_standard_rag(session_id: str) -> RAGSystem:
-    if session_id not in _standard_sessions:
-        _standard_sessions[session_id] = RAGSystem()
-    return _standard_sessions[session_id]
-
-def get_architect_rag(session_id: str) -> ArchitectRAG:
-    if session_id not in _architect_sessions:
-        _architect_sessions[session_id] = ArchitectRAG()
-    return _architect_sessions[session_id]
-
-def cleanup_session(session_id: str):
-    _standard_sessions.pop(session_id, None)
-    _architect_sessions.pop(session_id, None)
+standard_rag  = RAGSystem()
+architect_rag = ArchitectRAG()
 
 SUPPORTED_EXTENSIONS = {".pdf", ".xlsx", ".xls", ".xlsm", ".csv"}
 
@@ -63,7 +47,7 @@ class HistoryMessage(BaseModel):
 
 class IndexedFile(BaseModel):
     filename: str
-    type: str
+    type: str       # "pdf" or "excel"
     chunks: int
     sheets: List[str] = []
 
@@ -90,10 +74,7 @@ async def home():
 
 
 @app.post("/upload", response_model=UploadResponse)
-async def upload_file(
-    file: UploadFile = File(...),
-    session_id: str = Query("default")
-):
+async def upload_file(file: UploadFile = File(...)):
     original_name = file.filename
     ext           = os.path.splitext(original_name)[1].lower()
 
@@ -103,12 +84,11 @@ async def upload_file(
             detail=f"Unsupported file type '{ext}'. Supported: PDF, XLSX, XLS, XLSM, CSV"
         )
 
-    standard_rag  = get_standard_rag(session_id)
-    architect_rag = get_architect_rag(session_id)
-
+    # Use a temp file with delete=False so we control deletion
     tmp = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
     temp_path = tmp.name
     try:
+        # Write uploaded bytes and CLOSE the handle before processing
         with tmp:
             shutil.copyfileobj(file.file, tmp)
 
@@ -128,20 +108,18 @@ async def upload_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Indexing failed: {str(e)}")
     finally:
-        gc.collect()
+        gc.collect()  # Force release any lingering file handles
         for _ in range(5):
             try:
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
                 break
             except PermissionError:
-                time.sleep(0.2)
+                time.sleep(0.2)  # Wait briefly for Windows to release the lock
 
-
+                
 @app.delete("/files/{filename}")
-async def remove_file(filename: str, session_id: str = Query("default")):
-    standard_rag  = get_standard_rag(session_id)
-    architect_rag = get_architect_rag(session_id)
+async def remove_file(filename: str):
     standard_rag.remove_file(filename)
     architect_rag.remove_file(filename)
     return {"status": "removed", "filename": filename,
@@ -149,8 +127,7 @@ async def remove_file(filename: str, session_id: str = Query("default")):
 
 
 @app.get("/files", response_model=List[IndexedFile])
-async def list_files(session_id: str = Query("default")):
-    standard_rag = get_standard_rag(session_id)
+async def list_files():
     return [IndexedFile(**f) for f in standard_rag.get_indexed_files()]
 
 
@@ -159,11 +136,9 @@ async def chat(
     request: QuestionRequest,
     mode: str = Query("standard", enum=["standard", "architect"])
 ):
-    session_id    = request.session_id
-    standard_rag  = get_standard_rag(session_id)
-    architect_rag = get_architect_rag(session_id)
-
+    session_id = request.session_id
     try:
+        # ── Architect Mode ─────────────────────────────────────────────────────
         if mode == "architect":
             agent_app    = architect_rag.build_graph()
             chat_history = architect_rag.get_history_messages(session_id)
@@ -188,6 +163,7 @@ async def chat(
                 mode="Architect Agent", logs=result.get("logs", [])
             )
 
+        # ── Standard Mode ──────────────────────────────────────────────────────
         if standard_rag.vector_db is None:
             return ChatResponse(
                 answer="Please upload at least one PDF or Excel file before using Standard mode.",
@@ -195,8 +171,8 @@ async def chat(
                 mode="Standard RAG", logs=["Error: No files indexed."]
             )
 
-        result    = standard_rag.ask_with_sources(request.prompt, session_id=session_id)
-        answer    = result["answer"]
+        result  = standard_rag.ask_with_sources(request.prompt, session_id=session_id)
+        answer  = result["answer"]
         followups = standard_rag.generate_followups(request.prompt, answer)
 
         return ChatResponse(
@@ -212,20 +188,16 @@ async def chat(
 
 @app.get("/history/{session_id}", response_model=List[HistoryMessage])
 async def get_history(session_id: str):
-    standard_rag = get_standard_rag(session_id)
     return standard_rag.get_history_as_dicts(session_id)
 
 
 @app.delete("/history/{session_id}")
 async def clear_history(session_id: str):
-    standard_rag  = get_standard_rag(session_id)
-    architect_rag = get_architect_rag(session_id)
     standard_rag.clear_history(session_id)
     architect_rag.clear_history(session_id)
-    cleanup_session(session_id)
     return {"status": "cleared", "session_id": session_id}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
