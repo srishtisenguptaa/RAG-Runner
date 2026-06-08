@@ -248,7 +248,7 @@ async function sendMessage() {
     removeThinking(thinkingId);
     if (res.ok) {
       const data = await res.json();
-      appendAssistantMessage(
+      await appendAssistantMessage(
         data.answer ?? "(No answer)",
         `🔍 Source: ${data.sources ?? "N/A"} | 🧠 Engine: ${data.mode ?? ragMode}`,
         data.sources_detail ?? [], data.followups ?? []
@@ -262,6 +262,31 @@ async function sendMessage() {
   } finally {
     isLoading = false; sendBtn.disabled = false;
   }
+}
+
+// ── Typewriter helper ─────────────────────────────────────────────────────────
+function typewriterStream(element, text, onDone) {
+  // Split on word boundaries but keep the delimiter so spaces/newlines are preserved
+  const tokens = text.split(/(\s+)/);
+  let i = 0;
+  // Speed: ~18 ms per token gives a natural reading pace
+  const delay = Math.max(10, Math.min(30, 2000 / tokens.length));
+
+  function tick() {
+    if (i >= tokens.length) {
+      // Add blinking cursor, then remove it after a beat
+      element.classList.remove("typing-cursor");
+      if (onDone) onDone();
+      return;
+    }
+    element.textContent += tokens[i++];
+    element.closest("#chat-window").scrollTop = element.closest("#chat-window").scrollHeight;
+    setTimeout(tick, delay);
+  }
+
+  element.textContent = "";
+  element.classList.add("typing-cursor");
+  setTimeout(tick, 0);
 }
 
 // ── Message Rendering ─────────────────────────────────────────────────────────
@@ -281,65 +306,80 @@ function appendMessage(role, text) {
 }
 
 function appendAssistantMessage(text, caption, sourcesDetail, followups) {
-  hideEmpty();
-  const wrap   = document.createElement("div"); wrap.className = "message assistant";
-  const avatar = document.createElement("div"); avatar.className = "msg-avatar assistant"; avatar.textContent = "🤖";
-  const body   = document.createElement("div"); body.className = "msg-body";
-  const name   = document.createElement("div"); name.className = "msg-name"; name.textContent = "assistant";
-  const bubble = document.createElement("div"); bubble.className = "msg-text"; bubble.textContent = text;
-  const cap    = document.createElement("div"); cap.className = "msg-caption"; cap.textContent = caption;
-  body.appendChild(name); body.appendChild(bubble); body.appendChild(cap);
+  return new Promise(resolve => {
+    hideEmpty();
+    const wrap   = document.createElement("div"); wrap.className = "message assistant";
+    const avatar = document.createElement("div"); avatar.className = "msg-avatar assistant"; avatar.textContent = "🤖";
+    const body   = document.createElement("div"); body.className = "msg-body";
+    const name   = document.createElement("div"); name.className = "msg-name"; name.textContent = "assistant";
+    const bubble = document.createElement("div"); bubble.className = "msg-text";
+    // Caption + extras start hidden; revealed after typewriter finishes
+    const cap    = document.createElement("div"); cap.className = "msg-caption stream-reveal"; cap.textContent = caption;
+    body.appendChild(name); body.appendChild(bubble); body.appendChild(cap);
 
-  if (sourcesDetail && sourcesDetail.length > 0) {
-    const srcBlock = document.createElement("div"); srcBlock.className = "sources-block";
-    const toggle   = document.createElement("div"); toggle.className = "sources-toggle";
-    toggle.innerHTML = `<span class="chevron">▶</span> View ${sourcesDetail.length} Source Chunk${sourcesDetail.length > 1 ? "s" : ""}`;
-    const cards    = document.createElement("div"); cards.className = "sources-cards";
-    const colours  = ["#4b9eff", "#2dc97a", "#f5a623"];
+    // Build sources block (hidden initially)
+    let srcBlock = null;
+    if (sourcesDetail && sourcesDetail.length > 0) {
+      srcBlock = document.createElement("div"); srcBlock.className = "sources-block stream-reveal";
+      const toggle   = document.createElement("div"); toggle.className = "sources-toggle";
+      toggle.innerHTML = `<span class="chevron">▶</span> View ${sourcesDetail.length} Source Chunk${sourcesDetail.length > 1 ? "s" : ""}`;
+      const cards    = document.createElement("div"); cards.className = "sources-cards";
+      const colours  = ["#4b9eff", "#2dc97a", "#f5a623"];
 
-    sourcesDetail.forEach((src, i) => {
-      const card = document.createElement("div"); card.className = "source-card";
-      card.style.borderLeftColor = colours[i] ?? "#4b9eff";
+      sourcesDetail.forEach((src, i) => {
+        const card = document.createElement("div"); card.className = "source-card";
+        card.style.borderLeftColor = colours[i] ?? "#4b9eff";
+        const isExcel = src.file_type === "excel" || src.file_type === "csv";
+        const icon    = src.file_type === "pdf" ? "📄" : src.file_type === "csv" ? "📋" : "📊";
+        const locInfo = isExcel
+          ? (src.sheets ? `Sheets: ${src.sheets}` : "Spreadsheet")
+          : (src.page !== "N/A" ? `Page ${src.page}` : "N/A");
+        card.innerHTML = `
+          <div class="source-card-header">
+            <span class="source-page">${icon} ${locInfo}</span>
+            <span class="source-score">Score: ${src.score}</span>
+          </div>
+          <div class="source-file-tag">${src.source_file ?? ""}</div>
+          <div class="source-snippet">"${src.snippet}${src.snippet.length >= 220 ? "…" : ""}"</div>`;
+        cards.appendChild(card);
+      });
 
-      const isExcel = src.file_type === "excel" || src.file_type === "csv";
-      const icon    = src.file_type === "pdf" ? "📄" : src.file_type === "csv" ? "📋" : "📊";
-      const locInfo = isExcel
-        ? (src.sheets ? `Sheets: ${src.sheets}` : "Spreadsheet")
-        : (src.page !== "N/A" ? `Page ${src.page}` : "N/A");
+      toggle.addEventListener("click", () => {
+        const open = cards.classList.toggle("visible");
+        toggle.classList.toggle("open", open);
+        toggle.querySelector(".chevron").textContent = open ? "▼" : "▶";
+      });
+      srcBlock.appendChild(toggle); srcBlock.appendChild(cards); body.appendChild(srcBlock);
+    }
 
-      card.innerHTML = `
-        <div class="source-card-header">
-          <span class="source-page">${icon} ${locInfo}</span>
-          <span class="source-score">Score: ${src.score}</span>
-        </div>
-        <div class="source-file-tag">${src.source_file ?? ""}</div>
-        <div class="source-snippet">"${src.snippet}${src.snippet.length >= 220 ? "…" : ""}"</div>`;
-      cards.appendChild(card);
+    // Build followups block (hidden initially)
+    let fuBlock = null;
+    if (followups && followups.length > 0) {
+      fuBlock = document.createElement("div"); fuBlock.className = "followup-block stream-reveal";
+      const fuLabel = document.createElement("div"); fuLabel.className = "followup-label"; fuLabel.textContent = "💡 You might also ask";
+      const chips   = document.createElement("div"); chips.className = "followup-chips";
+      followups.forEach(q => {
+        const chip = document.createElement("button"); chip.className = "chip"; chip.textContent = q;
+        chip.addEventListener("click", () => { chatInput.value = q; chatInput.dispatchEvent(new Event("input")); chatInput.focus(); });
+        chips.appendChild(chip);
+      });
+      fuBlock.appendChild(fuLabel); fuBlock.appendChild(chips); body.appendChild(fuBlock);
+    }
+
+    wrap.appendChild(avatar); wrap.appendChild(body);
+    chatWindow.appendChild(wrap);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    // Start typewriter; reveal extras when done
+    typewriterStream(bubble, text, () => {
+      // Fade-in caption and extras
+      [cap, srcBlock, fuBlock].forEach(el => {
+        if (el) el.classList.add("stream-visible");
+      });
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+      resolve();
     });
-
-    toggle.addEventListener("click", () => {
-      const open = cards.classList.toggle("visible");
-      toggle.classList.toggle("open", open);
-      toggle.querySelector(".chevron").textContent = open ? "▼" : "▶";
-    });
-    srcBlock.appendChild(toggle); srcBlock.appendChild(cards); body.appendChild(srcBlock);
-  }
-
-  if (followups && followups.length > 0) {
-    const fuBlock = document.createElement("div"); fuBlock.className = "followup-block";
-    const fuLabel = document.createElement("div"); fuLabel.className = "followup-label"; fuLabel.textContent = "💡 You might also ask";
-    const chips   = document.createElement("div"); chips.className = "followup-chips";
-    followups.forEach(q => {
-      const chip = document.createElement("button"); chip.className = "chip"; chip.textContent = q;
-      chip.addEventListener("click", () => { chatInput.value = q; chatInput.dispatchEvent(new Event("input")); chatInput.focus(); });
-      chips.appendChild(chip);
-    });
-    fuBlock.appendChild(fuLabel); fuBlock.appendChild(chips); body.appendChild(fuBlock);
-  }
-
-  wrap.appendChild(avatar); wrap.appendChild(body);
-  chatWindow.appendChild(wrap);
-  chatWindow.scrollTop = chatWindow.scrollHeight;
+  });
 }
 
 let thinkingCounter = 0;

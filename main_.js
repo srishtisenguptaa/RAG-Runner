@@ -149,7 +149,8 @@ indexBtn.addEventListener("click", async () => {
     try {
       const form = new FormData();
       form.append("file", file, name);
-      const res = await fetch(`${API}/upload`, { method: "POST", body: form });
+      // ── SESSION_ID added here so files are isolated per user ──
+      const res = await fetch(`${API}/upload?session_id=${SESSION_ID}`, { method: "POST", body: form });
       if (res.ok) {
         const data = await res.json();
         successCount++;
@@ -208,7 +209,8 @@ function renderIndexedFiles(files) {
   indexedFilesList.querySelectorAll(".indexed-remove").forEach(btn => {
     btn.addEventListener("click", async () => {
       try {
-        const res = await fetch(`${API}/files/${encodeURIComponent(btn.dataset.filename)}`, { method: "DELETE" });
+        // ── SESSION_ID added here so only this user's file is removed ──
+        const res = await fetch(`${API}/files/${encodeURIComponent(btn.dataset.filename)}?session_id=${SESSION_ID}`, { method: "DELETE" });
         if (res.ok) renderIndexedFiles((await res.json()).indexed_files ?? []);
       } catch (e) {
         showStatus(`❌ Could not remove: ${e.message}`, "error");
@@ -217,8 +219,8 @@ function renderIndexedFiles(files) {
   });
 }
 
-// Load on startup
-fetch(`${API}/files`).then(r => r.ok ? r.json() : []).then(renderIndexedFiles).catch(() => {});
+// Load on startup — only this user's files
+fetch(`${API}/files?session_id=${SESSION_ID}`).then(r => r.ok ? r.json() : []).then(renderIndexedFiles).catch(() => {});
 
 // ── Chat Input ────────────────────────────────────────────────────────────────
 chatInput.addEventListener("input", () => {

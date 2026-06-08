@@ -346,31 +346,3 @@ input:checked + .theme-track::before { transform: translate(22px, -50%); }
   #input-bar { padding: 8px 10px; }
   .msg-text { font-size: 13px; }
 }
-
-/* ── Typewriter / streaming effect ─────────────────────────────────────────── */
-
-/* Blinking cursor shown on the bubble while typing */
-.msg-text.typing-cursor::after {
-  content: "▍";
-  display: inline-block;
-  color: var(--accent);
-  animation: blink-cursor 0.6s step-start infinite;
-  margin-left: 1px;
-}
-
-@keyframes blink-cursor {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-}
-
-/* Elements revealed after typing finishes */
-.stream-reveal {
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
-}
-
-.stream-reveal.stream-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
