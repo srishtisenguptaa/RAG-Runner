@@ -56,9 +56,9 @@ function fileKindIcon(kind) {
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 themeCheck.addEventListener("change", () => {
-  const dark = themeCheck.checked;
-  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
-  themeLabel.textContent = dark ? "Dark" : "Light";
+  const light = themeCheck.checked;
+  document.documentElement.setAttribute("data-theme", light ? "light" : "dark");
+  themeLabel.textContent = light ? "Light" : "Dark";
 });
 
 // ── Tooltip positioning ───────────────────────────────────────────────────────
